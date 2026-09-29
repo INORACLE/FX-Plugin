@@ -1,0 +1,26 @@
+# 运行时生成的账户存档
+data/
+
+# 依赖与构建产物
+node_modules/
+dist/
+build/
+temp/
+tmp/
+
+# 日志与缓存
+*.log
+.cache/
+
+# 环境与密钥
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*token*
+*cookie*
+
+# 编辑器
+.vscode
+.idea/
