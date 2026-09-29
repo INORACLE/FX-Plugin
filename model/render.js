@@ -33,7 +33,7 @@ export const signedMoney = n =>
 
 export const pct = n => `${Number(n) >= 0 ? "+" : ""}${(Number(n) || 0).toFixed(2)}%`
 
-const sign = n => (n > 0 ? "🟢" : n < 0 ? "🔴" : "⚪")
+export const sign = n => (n > 0 ? "🟢" : n < 0 ? "🔴" : "⚪")
 const bar = (ratio, len = 10) => {
   const filled = Math.max(0, Math.min(len, Math.round(ratio * len)))
   return "█".repeat(filled) + "░".repeat(len - filled)

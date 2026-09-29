@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>行情</title>
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: #0e1621;
+      color: #dce6f2;
+      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", "Helvetica Neue", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    #container {
+      width: 900px;
+      padding: 26px 28px 24px;
+      background: #0e1621;
+    }
+
+    .head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 20px 24px;
+      border: 1px solid #22374f;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #16283d 0%, #10202f 100%);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, .35);
+    }
+
+    .head .t {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .eyebrow {
+      margin: 0 0 5px;
+      color: #4fbf9a;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 2.4px;
+    }
+
+    .title {
+      margin: 0;
+      color: #f2f7fc;
+      font-size: 28px;
+      line-height: 1.2;
+      font-weight: 700;
+    }
+
+    .sub {
+      margin: 6px 0 0;
+      color: #8ba3bd;
+      font-size: 13.5px;
+    }
+
+    /* 价格卡 */
+    .price {
+      flex: none;
+      text-align: right;
+    }
+
+    .price .v {
+      color: #f2f7fc;
+      font-family: Consolas, "SFMono-Regular", monospace;
+      font-size: 34px;
+      line-height: 1.1;
+      font-weight: 700;
+    }
+
+    .price .c {
+      font-family: Consolas, "SFMono-Regular", monospace;
+      font-size: 17px;
+      font-weight: 700;
+    }
+
+    .up {
+      color: #4fbf9a;
+    }
+
+    .down {
+      color: #e8697d;
+    }
+
+    /* 图表 */
+    .plot {
+      margin-top: 14px;
+      padding: 16px 18px 12px;
+      border: 1px solid #1e3149;
+      border-radius: 14px;
+      background: #131f2e;
+    }
+
+    .plot svg {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .axis {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+      color: #5c7893;
+      font-family: Consolas, "SFMono-Regular", monospace;
+      font-size: 12px;
+    }
+
+    /* 战役进度 */
+    .prog {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 14px;
+      padding: 14px 18px;
+      border: 1px solid #2a3a2f;
+      border-radius: 14px;
+      background: #132019;
+    }
+
+    .prog .bar {
+      flex: 1;
+      height: 8px;
+      border-radius: 8px;
+      background: #1d2c24;
+      overflow: hidden;
+    }
+
+    .prog .bar i {
+      display: block;
+      height: 100%;
+      border-radius: 8px;
+      background: linear-gradient(90deg, #4fbf9a, #63c98d);
+    }
+
+    .prog .n {
+      flex: none;
+      color: #8fd6a8;
+      font-family: Consolas, "SFMono-Regular", monospace;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .foot {
+      margin-top: 12px;
+      color: #55697d;
+      font-size: 12.5px;
+      text-align: center;
+    }
+
+    .cmds {
+      margin-top: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    .cmds span {
+      padding: 5px 12px;
+      border: 1px solid #2c4964;
+      border-radius: 999px;
+      background: rgba(79, 191, 154, .07);
+      color: #9fd8c4;
+      font-family: Consolas, "SFMono-Regular", monospace;
+      font-size: 12.5px;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="container">
+    <header class="head">
+      <div class="t">
+        <p class="eyebrow">{{eyebrow}}</p>
+        <h1 class="title">{{pairName}}</h1>
+        <p class="sub">{{sub}}</p>
+      </div>
+      <div class="price">
+        <div class="v">{{price}}</div>
+        <div class="c {{changeClass}}">{{change}}</div>
+      </div>
+    </header>
+
+    <section class="plot">
+      <svg viewBox="0 0 844 300" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="fillUp" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#4fbf9a" stop-opacity=".34" />
+            <stop offset="100%" stop-color="#4fbf9a" stop-opacity="0" />
+          </linearGradient>
+          <linearGradient id="fillDown" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#e8697d" stop-opacity=".34" />
+            <stop offset="100%" stop-color="#e8697d" stop-opacity="0" />
+          </linearGradient>
+        </defs>
+        {{each gridlines g}}
+        <line x1="0" y1="{{g.y}}" x2="844" y2="{{g.y}}" stroke="#1e3149" stroke-width="1" />
+        {{/each}}
+        <polygon points="{{area}}" fill="url(#{{fillId}})" />
+        <polyline points="{{line}}" fill="none" stroke="{{stroke}}" stroke-width="2.2"
+          stroke-linejoin="round" stroke-linecap="round" />
+        {{if event}}<line x1="{{event.x}}" y1="0" x2="{{event.x}}" y2="300" stroke="#ffd98a"
+            stroke-width="1.4" stroke-dasharray="5 4" />{{/if}}
+        <circle cx="{{last.x}}" cy="{{last.y}}" r="4.2" fill="{{stroke}}" />
+      </svg>
+      <div class="axis">
+        <span>{{axisMin}}</span>
+        <span>{{axisMax}}</span>
+      </div>
+    </section>
+
+    {{if progress}}
+    <section class="prog">
+      <div class="bar"><i style="width:{{progress.pct}}%"></i></div>
+      <div class="n">{{progress.text}}</div>
+    </section>
+    {{/if}}
+
+    <div class="cmds">
+      {{each cmds c}}<span>{{c}}</span>{{/each}}
+    </div>
+
+    <div class="foot">{{foot}}</div>
+  </div>
+</body>
+
+</html>

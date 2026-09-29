@@ -34,6 +34,7 @@ import {
   tradeLog,
   tutorial,
 } from "../model/render.js"
+import { battlesImage, chartImage, quotesImage } from "../model/card-image.js"
 import { helpImage } from "../model/help-image.js"
 
 /** 跨热重载共享的运行时 */
@@ -212,6 +213,18 @@ export class FxGame extends plugin {
     return this.reply(body, true, { at: config.atSender })
   }
 
+  /**
+   * 事件在前、正文在后。正文是图片时只发图片，
+   * 避免把 segment 和说明文字拼成一个坏掉的消息。
+   */
+  async sayWith(events, content) {
+    const isImage = content && typeof content === "object" && content.type === "image"
+    const head = events?.length ? events.join("\n") : ""
+    if (!isImage) return this.say(events, content)
+    if (head) await this.reply(head, true, { at: config.atSender })
+    return this.reply(content, true)
+  }
+
   /** 首次进来自动开户 */
   async onboarding({ state, fresh }) {
     if (!fresh) return false
@@ -266,7 +279,7 @@ export class FxGame extends plugin {
   async onQuotes() {
     const c = await this.load()
     if (await this.onboarding(c)) return
-    return this.say(c.events, pairList(c.state, c.view))
+    return this.sayWith(c.events, await quotesImage(c.state, c.view, pairList(c.state, c.view)))
   }
 
   async onChart(e) {
@@ -274,7 +287,8 @@ export class FxGame extends plugin {
     if (await this.onboarding(c)) return
     const pair = resolvePair(argOf(e, "(?:图表|走势|曲线|k线|chart)")[0]) || c.state.pair
     const head = `【${pair}】${pairOf(pair)?.name ?? ""} 现价 ${priceText(pair, c.view.priceOf(pair))}`
-    return this.say(c.events, `${head}\n${chart(c.state, c.view, pair)}`)
+    const fallback = `${head}\n${chart(c.state, c.view, pair)}`
+    return this.sayWith(c.events, await chartImage(c.view, pair, fallback))
   }
 
   async onPrice(e) {
@@ -508,24 +522,33 @@ export class FxGame extends plugin {
   async onReal() {
     const c = await this.load()
     if (await this.onboarding(c)) return
-    if (c.state.mode === "real")
-      return this.say(
+    if (c.state.mode === "real") {
+      return this.sayWith(
         c.events,
-        `已在真实历史数据模式：${c.view.date}（第 ${c.view.index + 1}/${c.view.total} 个交易日）\n用 #外汇下一日 推进。`,
+        await chartImage(
+          c.view,
+          c.state.pair,
+          `已在真实历史数据模式：${c.view.date}（第 ${c.view.index + 1}/${c.view.total} 个交易日）\n用 #外汇下一日 推进。`,
+        ),
       )
+    }
     const res = await setMode(c.state, "real")
     if (!res.ok) return this.say(c.events, `✕ ${res.msg}`)
     const after = refresh(c.state)
     await this.save(after.state)
     const v = after.view
-    return this.say(
+    return this.sayWith(
       c.events,
-      [
-        "✓ 已切换为真实历史汇率回放（Frankfurter 日度参考价）",
-        `${v.date} · 第 ${v.index + 1} / ${v.total} 个交易日`,
-        chart(after.state, v, after.state.pair),
-        "用 #外汇下一日 逐日推进。",
-      ].join("\n"),
+      await chartImage(
+        v,
+        after.state.pair,
+        [
+          "✓ 已切换为真实历史汇率回放（Frankfurter 日度参考价）",
+          `${v.date} · 第 ${v.index + 1} / ${v.total} 个交易日`,
+          chart(after.state, v, after.state.pair),
+          "用 #外汇下一日 逐日推进。",
+        ].join("\n"),
+      ),
     )
   }
 
@@ -536,16 +559,14 @@ export class FxGame extends plugin {
     if (!arg) {
       if (c.state.mode === "battle" && c.state.battleId) {
         const meta = battleOf(c.state.battleId)
-        return this.say(
-          c.events,
-          [
-            battleBrief(meta),
-            `进度 ${c.view.index + 1}/${c.view.total} · 当前 ${c.view.date}`,
-            chart(c.state, c.view, c.state.pair),
-          ].join("\n"),
-        )
+        const fallback = [
+          battleBrief(meta),
+          `进度 ${c.view.index + 1}/${c.view.total} · 当前 ${c.view.date}`,
+          chart(c.state, c.view, c.state.pair),
+        ].join("\n")
+        return this.sayWith(c.events, await chartImage(c.view, c.state.pair, fallback))
       }
-      return this.say(c.events, battleList())
+      return this.sayWith(c.events, await battlesImage(battleList()))
     }
     const idx = Number.parseInt(arg, 10)
     const meta = Number.isInteger(idx) ? BATTLES[idx - 1] : battleOf(String(arg).toLowerCase())
@@ -554,15 +575,19 @@ export class FxGame extends plugin {
     if (!res.ok) return this.say(c.events, `✕ ${res.msg}`)
     const after = refresh(c.state)
     await this.save(after.state)
-    return this.say(
+    return this.sayWith(
       c.events,
-      [
-        `⚔ ${meta.title} 已就绪${res.resumed ? "（继续上次进度）" : "，从事件前一天开始回放"}`,
-        battleBrief(meta),
-        `进度 ${after.view.index + 1}/${after.view.total} · 当前 ${after.view.date}`,
-        chart(after.state, after.view, after.state.pair),
-        `事件日是 ${meta.event}，用 #外汇下一日 推进过去。`,
-      ].join("\n"),
+      await chartImage(
+        after.view,
+        after.state.pair,
+        [
+          `⚔ ${meta.title} 已就绪${res.resumed ? "（继续上次进度）" : "，从事件前一天开始回放"}`,
+          battleBrief(meta),
+          `进度 ${after.view.index + 1}/${after.view.total} · 当前 ${after.view.date}`,
+          chart(after.state, after.view, after.state.pair),
+          `事件日是 ${meta.event}，用 #外汇下一日 推进过去。`,
+        ].join("\n"),
+      ),
     )
   }
 
@@ -581,7 +606,6 @@ export class FxGame extends plugin {
       `账户总权益 ${money(acc.equity)} · 浮动盈亏 ${signedMoney(acc.floating)}`,
     ]
     if (after.state.debt > 0) parts.push(`待还贷款 ${money(after.state.debt)}`)
-    parts.push(chart(after.state, v, after.state.pair))
     if (v.index >= v.total - 1) {
       rt.auto.delete(autoKey(this.gid, this.uid))
       parts.push(
@@ -590,7 +614,11 @@ export class FxGame extends plugin {
           : "已经到达最新可用交易日。",
       )
     }
-    return this.say([...c.events, ...after.events], parts.join("\n"))
+    const events = [...c.events, ...after.events, ...parts]
+    return this.sayWith(
+      events,
+      await chartImage(v, after.state.pair, chart(after.state, v, after.state.pair)),
+    )
   }
 
   async onReplay() {

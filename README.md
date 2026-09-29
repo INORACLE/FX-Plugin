@@ -47,8 +47,25 @@ git pull
 2. 首次启动会自动生成 `config/FX-Plugin.yaml`。
 3. 在群里发一条 `#FX帮助`，收到指令表图片即安装成功。
 
-> 提示：`#FX帮助` 需要 Yunzai 自带的图片渲染后端。
+> 提示：图片功能需要 Yunzai 自带的渲染后端（shotium 或 puppeteer，二者任一即可）。
 > 若渲染不可用，插件会自动退回纯文字，不影响使用。
+
+## 图片指令
+
+以下指令返回**图片**而非文字：
+
+| 指令 | 返回内容 |
+| --- | --- |
+| `#FX帮助` | 完整指令表 |
+| `#外汇行情` | 盘口表：7 个货币对 + 迷你走势图 |
+| `#外汇图表 [货币对]` | 走势图，含价格、涨跌、进度条 |
+| `#外汇真实` | 真实历史汇率走势图 |
+| `#外汇战役` | 经典战役列表（4 张卡片） |
+| `#外汇战役 1` | 该战役走势图 + 事件日标记 |
+| `#外汇下一日` | 推进后的走势图 + 账户权益 |
+
+走势图在回放模式下带进度条，经典战役还会在事件日画一条金色竖线。
+文字描述被压缩成图上的一行副标题，正文只保留指令提示。
 
 ## 指令
 
@@ -151,25 +168,31 @@ FX-Plugin/
 ├─ apps/
 │  └─ trade.js       # 指令规则与命令处理
 ├─ model/
-│  ├─ constants.js    # 货币对、战役、教程、利率等常量
-│  ├─ config.js       # 配置文件
-│  ├─ store.js        # Redis / 文件持久化
-│  ├─ market.js       # 模拟行情 + Frankfurter 拉取
-│  ├─ engine.js       # 账户、开平仓、强平、贷款、战役
-│  ├─ render.js       # 文本渲染与 ASCII 图表
-│  └─ help-image.js   # 指令表图片渲染（失败自动回退文字）
+│  ├─ constants.js     # 货币对、战役、教程、利率等常量
+│  ├─ config.js        # 配置文件
+│  ├─ store.js         # Redis / 文件持久化
+│  ├─ market.js        # 模拟行情 + Frankfurter 拉取
+│  ├─ engine.js        # 账户、开平仓、强平、贷款、战役
+│  ├─ render.js        # 文本渲染与 ASCII 图表（图片失败时的兜底）
+│  ├─ help-image.js    # 指令表图片
+│  └─ card-image.js    # 盘口 / 走势图 / 战役图片
 ├─ resources/
-│  └─ help/index.html # 指令表图片模板（art-template）
-└─ data/              # 账户存档（已 gitignore）
+│  └─ help/index.html   # 指令表模板
+│     quotes/index.html # 盘口模板
+│     chart/index.html  # 走势图模板
+│     battles/index.html# 战役列表模板
+└─ data/                # 账户存档（已 gitignore）
 ```
 
 `ticker` 与行情状态挂在 `globalThis` 上，修改插件触发热重载后行情不会中断或清空。
 
-### 指令表图片
+### 图片渲染
 
-`#FX帮助` 走 `lib/puppeteer/puppeteer.js`，用 `resources/help/index.html`
-经 art-template 填入 `render.js` 的 `helpModel()` 数据后截图。
-模板不含 `<script>`，因此 shotium 与 puppeteer 两个渲染后端都能处理。
+所有图片走 `lib/puppeteer/puppeteer.js`，用 `resources/*/index.html`
+经 art-template 填入数据后截图。模板均不含 `<script>`，
+因此 shotium 与 puppeteer 两个后端都能处理。
+
+数据来源是 `render.js` 的结构化输出，图片与文字兜底共用同一份数据，不会描述漂移。
 任何一步失败都会自动回退为纯文字，不会让用户收不到回复。
 
 ## 开发
